@@ -1,0 +1,108 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Client Profile - {{ client.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Client Profile Card -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Client Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" value="{{ client.username }}" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="{{ client.email }}" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone_number" class="form-control" value="{{ profile.phone_number }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea name="address" class="form-control" rows="3">{{ profile.address }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Preferred Contact Method</label>
+                            <select name="preferred_contact" class="form-select">
+                                <option value="email" {% if profile.preferred_contact == 'email' %}selected{% endif %}>Email</option>
+                                <option value="phone" {% if profile.preferred_contact == 'phone' %}selected{% endif %}>Phone</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking History -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Booking History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Total Price</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bookings %}
+                                <tr>
+                                    <td>{{ booking.property.name }}</td>
+                                    <td>{{ booking.start_date }}</td>
+                                    <td>{{ booking.end_date }}</td>
+                                    <td>${{ booking.total_price }}</td>
+                                    <td>
+                                        {% if booking.payment %}
+                                            {% if booking.payment.status == 'Completed' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending Payment</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-danger">No Payment</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No bookings found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize select2 for the preferred contact dropdown
+    $('.form-select').select2({
+        theme: 'bootstrap-5',
+        minimumResultsForSearch: Infinity
+    });
+});
+</script>
+{% endblock %}

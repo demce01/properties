@@ -1,0 +1,345 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Bookings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Bookings</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookingModal">
+        <i class="fas fa-plus me-2"></i>New Booking
+    </button>
+</div>
+
+<div class="row">
+    <!-- Calendar View -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Booking Calendar</h6>
+            </div>
+            <div class="card-body">
+                <div id="bookingCalendar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bookings -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Bookings</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for booking in recent_bookings %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ booking.property.name }}</h6>
+                            <small>${{ booking.total_price }}</small>
+                        </div>
+                        <p class="mb-1">{{ booking.client.username }}</p>
+                        <small>{{ booking.start_date }} - {{ booking.end_date }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Bookings Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Bookings</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Client</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Review</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                    <tr>
+                        <td>{{ booking.property.name }}</td>
+                        <td>{{ booking.client.username }}</td>
+                        <td>{{ booking.start_date }}</td>
+                        <td>{{ booking.end_date }}</td>
+                        <td>${{ booking.total_price }}</td>
+                        <td>
+                            <span class="badge {% if booking.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ booking.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if booking.end_date <= today %}
+                                {% if booking.review %}
+                                    <button class="btn btn-sm btn-success" disabled>
+                                        <i class="fas fa-star"></i> Reviewed
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-warning" onclick="openReviewModal({{ booking.id }})">
+                                        <i class="fas fa-star"></i> Add Review
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="editBooking({{ booking.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="cancelBooking({{ booking.id }})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Booking Modal -->
+<div class="modal fade" id="addBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'booking_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="property" class="form-label">Property</label>
+                                <select class="form-select" id="property" name="property" required>
+                                    <option value="">Select a property</option>
+                                    {% for property in properties %}
+                                    <option value="{{ property.id }}">{{ property.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="client" class="form-label">Client</label>
+                                <select class="form-select" id="client" name="client" required>
+                                    <option value="">Select a client</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}">{{ client.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Check-in Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Check-out Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Create Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Write a Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="reviewForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="booking_id" name="booking_id">
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="rating">
+                            {% for i in "54321"|make_list %}
+                            <input type="radio" name="rating" value="{{ i }}" id="rating{{ i }}">
+                            <label for="rating{{ i }}"><i class="far fa-star"></i></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include FullCalendar -->
+<link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.css' rel='stylesheet' />
+<link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
+
+<style>
+.rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.rating input {
+    display: none;
+}
+
+.rating label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 0 0.1em;
+    color: #ddd;
+}
+
+.rating input:checked ~ label,
+.rating label:hover,
+.rating label:hover ~ label {
+    color: #ffc107;
+}
+
+.rating input:checked + label:hover,
+.rating input:checked ~ label:hover,
+.rating label:hover ~ input:checked ~ label,
+.rating input:checked ~ label:hover ~ label {
+    color: #ffd700;
+}
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable
+        $('#bookingsTable').DataTable({
+            order: [[2, 'desc']],
+            pageLength: 10
+        });
+
+        // Initialize Calendar
+        var calendarEl = document.getElementById('bookingCalendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            plugins: ['dayGrid'],
+            initialView: 'dayGridMonth',
+            events: '/api/bookings/calendar/',
+            eventClick: function(info) {
+                // Handle event click
+                editBooking(info.event.id);
+            }
+        });
+        calendar.render();
+    });
+
+    // Calculate total price when dates or property changes
+    document.querySelectorAll('#start_date, #end_date, #property').forEach(el => {
+        el.addEventListener('change', calculateTotal);
+    });
+
+    function calculateTotal() {
+        const start = new Date(document.getElementById('start_date').value);
+        const end = new Date(document.getElementById('end_date').value);
+        const propertyId = document.getElementById('property').value;
+
+        if (start && end && propertyId) {
+            const nights = (end - start) / (1000 * 60 * 60 * 24);
+            fetch(`/api/properties/${propertyId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const total = nights * data.price_per_night;
+                    document.getElementById('total_price').value = total.toFixed(2);
+                });
+        }
+    }
+
+    function editBooking(id) {
+        // Add edit logic here
+    }
+
+    function cancelBooking(id) {
+        if (confirm('Are you sure you want to cancel this booking?')) {
+            fetch(`/api/bookings/${id}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                }
+            });
+        }
+    }
+
+    function openReviewModal(bookingId) {
+        document.getElementById('booking_id').value = bookingId;
+        new bootstrap.Modal(document.getElementById('reviewModal')).show();
+    }
+
+    document.getElementById('reviewForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(`/bookings/${formData.get('booking_id')}/review/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                Swal.fire('Error', 'Failed to submit review', 'error');
+            }
+        });
+    });
+
+    // Star rating interactivity
+    document.querySelectorAll('.rating label').forEach(label => {
+        label.addEventListener('mouseover', function() {
+            this.innerHTML = '<i class="fas fa-star"></i>';
+        });
+        
+        label.addEventListener('mouseout', function() {
+            if (!this.previousElementSibling.checked) {
+                this.innerHTML = '<i class="far fa-star"></i>';
+            }
+        });
+        
+        label.previousElementSibling?.addEventListener('change', function() {
+            if (this.checked) {
+                label.innerHTML = '<i class="fas fa-star"></i>';
+            }
+        });
+    });
+</script>
+{% endblock %}

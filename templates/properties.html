@@ -1,0 +1,193 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Properties{% endblock %}
+
+{% block content %}
+<div class="properties-container">
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <i class="fas fa-home"></i>
+            <h3>{{ stats.total_properties }}</h3>
+            <p>Total Properties</p>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-check-circle"></i>
+            <h3>{{ stats.available_properties }}</h3>
+            <p>Available</p>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-dollar-sign"></i>
+            <h3>${{ stats.average_price|floatformat:2 }}</h3>
+            <p>Avg. Price/Night</p>
+        </div>
+    </div>
+
+    <!-- Property List -->
+    <div class="property-grid">
+        {% for property in properties %}
+        <div class="property-card">
+            <div class="property-images swiper-container">
+                <div class="swiper-wrapper">
+                    {% for image in property.images.all %}
+                    <div class="swiper-slide">
+                        <img src="{{ image.image.url }}" alt="{{ property.name }}">
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="swiper-pagination"></div>
+                <div class="swiper-button-next"></div>
+                <div class="swiper-button-prev"></div>
+            </div>
+            
+            <div class="property-info">
+                <h3>{{ property.name }}</h3>
+                <div class="location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    {{ property.location }}
+                </div>
+                
+                <div class="amenities">
+                    {% for amenity in property.amenities.all %}
+                    <span class="amenity-tag">
+                        <i class="fas {{ amenity.icon }}"></i>
+                        {{ amenity.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                
+                <div class="rating">
+                    {% for i in "12345" %}
+                    <i class="fas fa-star {% if forloop.counter <= property.rating %}active{% endif %}"></i>
+                    {% endfor %}
+                    <span>({{ property.reviews.count }} reviews)</span>
+                </div>
+                
+                <div class="price">
+                    <span class="amount">${{ property.price_per_night }}</span>
+                    <span class="period">per night</span>
+                </div>
+                
+                <div class="status {{ property.status|lower }}">
+                    {{ property.status }}
+                </div>
+                
+                <div class="actions">
+                    {% if user.is_authenticated %}
+                    <button class="btn-book" data-property-id="{{ property.id }}">
+                        Book Now
+                    </button>
+                    {% if user.is_staff or user == property.owner %}
+                    <button class="btn-edit" data-property-id="{{ property.id }}">
+                        Edit
+                    </button>
+                    <button class="btn-delete" data-property-id="{{ property.id }}">
+                        Delete
+                    </button>
+                    {% endif %}
+                    {% else %}
+                    <a href="{% url 'login' %}" class="btn-login">Login to Book</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-properties">
+            <i class="fas fa-home"></i>
+            <p>No properties available at the moment.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if user.is_staff or user.is_owner %}
+    <!-- Add Property Modal -->
+    <div id="addPropertyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Property</h2>
+            <form id="addPropertyForm" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Property Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" name="location" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price per Night ($)</label>
+                    <input type="number" name="price_per_night" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Amenities</label>
+                    <div class="amenities-grid">
+                        {% for amenity in all_amenities %}
+                        <label class="amenity-checkbox">
+                            <input type="checkbox" name="amenities" value="{{ amenity.id }}">
+                            <i class="fas {{ amenity.icon }}"></i>
+                            {{ amenity.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Images</label>
+                    <input type="file" name="images" multiple accept="image/*">
+                </div>
+                <button type="submit" class="btn-submit">Add Property</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize image galleries
+        const swipers = document.querySelectorAll('.swiper-container').forEach(container => {
+            new Swiper(container, {
+                loop: true,
+                pagination: {
+                    el: '.swiper-pagination',
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+            });
+        });
+
+        // Modal handling
+        const modal = document.getElementById('addPropertyModal');
+        const addBtn = document.querySelector('.btn-add-property');
+        const closeBtn = document.querySelector('.close');
+
+        if (addBtn) {
+            addBtn.onclick = function() {
+                modal.style.display = "block";
+            }
+        }
+
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                modal.style.display = "none";
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
