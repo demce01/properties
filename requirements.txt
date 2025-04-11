@@ -1,0 +1,9 @@
+Django==5.2
+djangorestframework>=3.14.0
+django-cors-headers>=4.0.0
+Pillow>=10.0.0  # For image handling
+python-dateutil>=2.8.2  # For date handling
+django-filter>=23.0  # For filtering in DRF
+markdown>=3.5  # For DRF browsable API
+whitenoise>=6.0.0  # For serving static files
+gunicorn>=21.0.0  # For production deployment
