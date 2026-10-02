@@ -1,0 +1,5 @@
+pandas>=2.0
+numpy>=1.24
+pytest>=7.0
+# Live trading only (Windows, MT5 terminal installed and logged in):
+# MetaTrader5>=5.0.45
